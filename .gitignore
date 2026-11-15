@@ -11,3 +11,6 @@ output/
 *.sqlite-wal
 *.sqlite-shm
 *.db
+# M4 试验快照必须随包分发并与 manifest 对账（不能只留在本机）
+!research/mpn-2026/*.sqlite
+.dev-data/
