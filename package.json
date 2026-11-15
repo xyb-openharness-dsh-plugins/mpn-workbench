@@ -34,6 +34,7 @@
     "check:patient-create": "node scripts/check-patient-create.mjs .",
     "check:trial-snapshot": "node scripts/check-trial-snapshot.mjs .",
     "check:trial-matching": "node scripts/check-trial-matching.mjs .",
+    "check:selftest": "node scripts/check-data-dir.mjs . --self-test && node scripts/check-trial-chain.mjs . --self-test && node scripts/check-patient-create.mjs . --self-test && node scripts/check-trial-snapshot.mjs . --self-test && node scripts/check-trial-matching.mjs . --self-test && node scripts/check-agent-pane-contract.mjs . --self-test",
     "check:schema": "node scripts/check-schema.mjs .",
     "check:ui-parity": "node scripts/check-ui-parity.mjs",
     "check:version-literal": "node scripts/check-version-literal.mjs",

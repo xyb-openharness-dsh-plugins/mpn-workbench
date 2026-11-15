@@ -876,3 +876,22 @@ L1/L3 会拦 clinicaltrials.gov/ 这种裸域名）；③验收必须「双探�
 - **来源**：2026-11-14 gca-workbench←psc-workbench 全仓移植。
 - **坑与修法**：① BSD sed 不支持 `\b`（静默不替换），跨仓改名用 `perl -pi -e 's/\bpsc\b/gca/g'`；② `cp -R src dst/src` 在 dst/src 已存在时会复制成 `dst/src/src/` 嵌套并漏拷冲突文件——目标目录已存在一律 `rsync -a src/ dst/`；③ 事件通道等拼出的字面量（`<slug>:agent-draft`）分散在 bridge/app/client 三处，改名后必须 `grep -o "[a-z]*:agent-draft" | uniq -c` 验证唯一值，不一致=草稿桥静默断链。
 - **通用教训**：机械移植的收尾不是"没报错"，是"成对锚点 grep=0 且 uniq=1"。
+
+### L119 · `check-profile.mjs` 的 scope 白名单会让不匹配的包"0 项通过"
+
+- **来源**：2026-11-15 mpn-workbench M6。starter 的 `check-profile.mjs` 只扫 `@xyb-community` / `@xyb-openharness-dsh-plugins`；本包名是 `@community/mpn-workbench`，staging profile 登记完整仍输出「通过 0/0」并 exit 0。
+- **为什么危险**：装机层闸门最需要防的就是「装错/没装」，而 0 项检查 + 绿色退出比红更骗人——报告里很容易抄成“check-profile 通过”。
+- **修法**：① `SCOPES` 增加 `@community`（或改为从 profile dependencies 推导 scope，不再硬编码）；② `rows.length === 0` 必须硬失败并打印“检查 0 项不等于通过”。本轮用补 scope 的副本复跑得到 1/1，并在 `docs/release-draft/M9-starter-回流.md` 留 patch。
+- **通用教训**：任何“按白名单筛选后统计”的闸门，都要有“筛出 0 项 = 失败”的兜底；否则白名单就是静默跳过。
+
+### L120 · 同一指标不同单位/方法必须先拆可比组，再归一化
+
+- **来源**：2026-11-15 mpn-workbench D3 自修。指标卡与一图秀原按 `key` 分组，Hb 的 g/L 与 g/dL 会共用 min/max；一旦用户补一条外院报告，曲线会把单位变化画成“病情突变”。
+- **修法**：分组键改为 `key::unit::method`，指标卡与一图秀共用同一函数；取色只用 base key；图例写明单位/方法。注入 g/dL 血气记录后实测拆成两条独立线。
+- **通用教训**：归一化函数的输入必须是“同一把尺子量出来的序列”；分组键里不带单位与方法，等于默认所有报告同尺。
+
+### L121 · 中断恢复单先按里程碑补 commit，再动代码
+
+- **来源**：2026-11-15 mpn-workbench 19:08 TRANSPORT 中断恢复。本地 40 项改动跨 M1–M5，直接继续开发会让“哪些已验证”无法追溯。
+- **做法**：先 `git status` + 文档台账盘点 → 按 M1 文档 / M2 原型 / M3 schema / M4 快照 / M5 实现拆 commit（消息注明检查点）→ push → 再补 M6–M9。每个 commit 不追求单独全绿，但拆完立即跑一次全链确认 HEAD 绿。
+- **通用教训**：恢复单的第一交付物是“可追溯的云端进度”，不是新功能；commit 边界按验收单元切，不按文件类型切。
