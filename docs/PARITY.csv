@@ -1,2 +1,17 @@
 id,原型版本与定位,原型内容或行为,当前实现,差异,偏离原因及依据,替代方案,组件与API,验收证据,状态
-EXAMPLE-ID,文件hash/Tab/模块,最近值→翻转→最近五次折线,待评估,待评估,无依据时视为实现缺口,待定,待定,未验证,待核对
+P-DASH-01,prototypes/v0.2 dash,两套合成档案切换后状态卡/指标/症状整页联动,public/app.js 同字节,无,"合成数据唯一源 demo-data.js",无,MPNApp.nav/切档,probe-mpn-m2 切档 Hb 94,已对齐
+P-PROF-01,档案管理,"新建我的档案（is_demo=0）→ 立即切换 → API 落库","public + /api/mpn/subjects",无,无,无,POST subjects,test/write-api 3/3,已对齐
+P-REC-01,record,"8 类记录表单 → API → sqlite → reload 仍在",同左,无,无,无,POST /entries,test/write-api 4/4,已对齐
+P-MET-01,metrics,"按类别分组、单指标全期归一化、3D 固定高度翻面",同左,无,无,无,.metric-card/.metric-inner,截图 02/03 + CSS 断言,已对齐
+P-CHART-01,metrics chart,"多指标时间轴 + 治疗泳道分层 + 单点不连线",同左,无,无,无,SVG .chart,截图 04;probe text,已对齐
+P-TRIAL-01,trials match,"四段匹配、pct=符合÷已对照、<2 不给百分数、四档",trial-match.js 纯函数,无,35 号,无,computeMatch,test/trial-line 3/3,已对齐
+P-TRIAL-02,trials search,"关键词/病理/状态/阶段/地区，按条件排、不掺分",同左,无,无,无,search,截图 05,已对齐
+P-TRIAL-03,trials saved,"收藏三态、拒收零副作用、无假进度条",同左,无,无,无,saved_trial,test/write-api,已对齐
+P-TRIAL-04,trials pool,"卡头已载 N/返回 M/不是全库扫描/快照日期",同左,无,无,无,poolHead,probe text 2533,已对齐
+P-FILES-01,files,"复诊摘要、导出 HTML、打印、私密不进导出",同左,无,无,无,export-summary,截图/代码,已对齐
+P-SET-01,settings workspace,"资料目录真选择器、四类拒绝、回显；隐私/导出/关于",同左,无,无,无,pickDirectory + POST dir,check-data-dir 4/4,已对齐
+P-SET-02,settings mineru,"未接入明确标注；同意勾选、Token 掩码、pipeline 固定、Flash 额度",同左,无,18 号,C1 三 tab 已补,settingsMineru,浏览器实测 3 tab + 文案,已对齐
+P-SET-03,settings clinical,"逐通道终态、FAILED 不算查过、快照日期/条数",同左,无,无,无,settingsClinical,浏览器实测 FAILED 文案,已对齐
+P-PRIMER-01,primer,"四段顺序/来源/整页双入口/返回关闭/Esc 一层",同左,无,36 号,无,primer.js,P1–P9 10/10,已对齐
+P-AI-01,panel,"ownsSession/newSession/subscribe/草稿不自动发",lib/client.js,无,§4 九条,无,customFrame,contract checker 全绿,源码通过；实机未验证
+P-INSTALL-01,package,"tgz 40 files + public/ + schema/ + research/",同左,无,无,无,npm pack,sha256 20765b50…,静态通过；实机未验证
