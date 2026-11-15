@@ -1,3 +1,5 @@
 - insert:
     - id: mpn-main
       name: "@community/mpn-workbench"
+      config:
+        root: !!js dshHomePath('mpn')
