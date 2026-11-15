@@ -13,7 +13,7 @@
 
   var state = {
     data: null, profileId: null, page: 'dash', api: false, ready: false,
-    recordKind: 'symptom', metricsView: 'cards', trialTab: 'match', trialDetail: null,
+    recordKind: 'symptom', metricsView: 'cards', trialTab: 'match', settingsTab: 'workspace', trialDetail: null,
     trialFilters: { keyword: '', subtype: '', status: '', phase: '', country: '', sort: 'updated' },
     matchPref: 'all', savedHidden: {}, bootError: ''
   }
@@ -320,7 +320,9 @@
         '<div class="field full"><label class="chip" style="display:inline-flex;align-items:center;width:max-content"><input type="checkbox" name="private" style="margin-right:6px"> 设为私密（列表、导出、AI 上下文都不显示）</label></div>' +
       '</div>' +
       '<div class="form-foot"><span class="hint" id="save-hint">' + (state.api ? '将写入本机 sqlite。' : '演示态：只在本页内存中，刷新会重置。') + '</span>' +
-        '<button class="btn primary" type="submit">保存记录</button></div>' +
+        '<button class="btn text" type="button" data-action="cancel-record">取消</button>' +
+        '<button class="btn" type="submit" data-mode="continue">保存并继续录入</button>' +
+        '<button class="btn primary" type="submit" data-mode="close">保存并关闭</button></div>' +
     '</form>'
   }
 
@@ -330,10 +332,26 @@
     ;(p.metrics || []).forEach(function (m) {
       var cat = m.category || '其他'
       if (!map[cat]) map[cat] = {}
-      if (!map[cat][m.key]) map[cat][m.key] = []
-      map[cat][m.key].push(m)
+      var gid = metricGroupId(m)
+      if (!map[cat][gid]) map[cat][gid] = []
+      map[cat][gid].push(m)
     })
     return GROUP_ORDER.filter(function (g) { return map[g] }).map(function (g) { return { name: g, items: map[g] } })
+  }
+  /* 单位或检测方法变化 = 新的可比组，不把两次不同口径的化验连成一条线 */
+  function metricGroupId(m) {
+    var unit = String(m.unit || '').trim()
+    var method = String(m.method || '').trim()
+    return String(m.key || m.label || 'metric') + (unit ? '::' + unit : '') + (method ? '::' + method : '')
+  }
+  function metricBase(id) { return String(id).split('::')[0] }
+  function metricGroupLabel(id, series) {
+    var m = series && series[0] || {}
+    var extra = []
+    if (id.indexOf('::') < 0) return m.label || metricBase(id)
+    if (m.unit) extra.push(m.unit)
+    if (m.method) extra.push(m.method)
+    return (m.label || metricBase(id)) + (extra.length ? ' · ' + extra.join(' / ') : '')
   }
   function metricStats(series) {
     var vals = series.map(function (m) { return Number(m.value) }).filter(isFinite)
@@ -374,7 +392,7 @@
           var delta = stat.delta
           var deltaText = delta == null ? '首次记录' : (delta > 0 ? '+' : '') + fmtNum(delta) + ' ' + (stat.last.unit || '')
           var deltaClass = delta == null || delta === 0 ? 'delta-flat' : delta > 0 ? 'delta-up' : 'delta-down'
-          var color = COLORS[key] || '#2f5d4e'
+          var color = COLORS[metricBase(key)] || '#2f5d4e'
           return '<button class="metric-card" type="button" data-action="flip-metric" aria-pressed="false" aria-label="' + esc(stat.last.label + '，最近 ' + fmtNum(stat.last.value) + stat.last.unit + '，点击翻看趋势') + '">' +
             '<div class="metric-inner"><div class="metric-face front">' +
               '<div class="m-top"><span class="m-label">' + esc(stat.last.label) + '</span><span class="m-count">' + stat.count + ' 次</span></div>' +
@@ -391,14 +409,17 @@
   }
   function oneChart(p) {
     var groups = metricGroups(p)
-    var chosen = ['Hb', 'PLT', 'WBC', 'LDH', 'Spleen'].filter(function (k) {
-      return (p.metrics || []).some(function (m) { return m.key === k })
+    var flat = {}
+    groups.forEach(function (g) { Object.keys(g.items).forEach(function (k) { flat[k] = g.items[k] }) })
+    var bases = ['Hb', 'PLT', 'WBC', 'LDH', 'Spleen']
+    var chosen = Object.keys(flat).filter(function (k) { return bases.indexOf(metricBase(k)) >= 0 }).sort(function (a, b) {
+      return bases.indexOf(metricBase(a)) - bases.indexOf(metricBase(b))
     })
     if (!chosen.length) return '<div class="empty"><b>还没有足够的数据</b>至少记一次指标后再来看一图秀。</div>'
     var seriesMap = {}
     var allDates = []
     chosen.forEach(function (k) {
-      var arr = (p.metrics || []).filter(function (m) { return m.key === k }).sort(function (a, b) { return a.date.localeCompare(b.date) })
+      var arr = flat[k].slice().sort(function (a, b) { return a.date.localeCompare(b.date) })
       seriesMap[k] = arr
       arr.forEach(function (m) { if (allDates.indexOf(m.date) < 0) allDates.push(m.date) })
     })
@@ -421,11 +442,12 @@
     var lines = chosen.map(function (k, idx) {
       var s = seriesMap[k]
       var pts = s.map(function (m) { return { x: x(m.date), y: y(m.value, s), v: Number(m.value), date: m.date, id: m.id } })
-      var color = COLORS[k] || '#2f5d4e'
+      var color = COLORS[metricBase(k)] || '#2f5d4e'
+      var lineLabel = metricGroupLabel(k, s)
       var path = pts.length > 1 ? '<path d="' + smoothPath(pts) + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" data-line="' + k + '"/>' : ''
       var dots = pts.map(function (pt) { return '<circle cx="' + pt.x + '" cy="' + pt.y + '" r="3.2" fill="' + color + '" data-date="' + pt.date + '"><title>' + esc(k + ' ' + fmtNum(pt.v) + ' @ ' + pt.date) + '</title></circle>' }).join('')
       var last = s[s.length - 1]
-      return path + dots + '<text x="' + (L - 10) + '" y="' + (T + idx * 15 + 11) + '" text-anchor="end" font-size="10" fill="' + color + '">' + k + ' ' + fmtNum(last.value) + '</text>'
+      return path + dots + '<text x="' + (L - 10) + '" y="' + (T + idx * 15 + 11) + '" text-anchor="end" font-size="10" fill="' + color + '">' + esc(lineLabel) + ' ' + fmtNum(last.value) + '</text>'
     }).join('')
     var treatments = []
     ;(p.treatments || []).forEach(function (t) {
@@ -440,7 +462,7 @@
     })
     var legend = chosen.map(function (k) {
       var s = seriesMap[k], vals = s.map(function (m) { return Number(m.value) })
-      return '<span><i style="background:' + (COLORS[k] || '#2f5d4e') + '"></i>' + k + ' · 自身 ' + fmtNum(Math.min.apply(null, vals)) + '–' + fmtNum(Math.max.apply(null, vals)) + ' ' + esc(s[0].unit || '') + '</span>'
+      return '<span><i style="background:' + (COLORS[metricBase(k)] || '#2f5d4e') + '"></i>' + esc(metricGroupLabel(k, s)) + ' · 自身 ' + fmtNum(Math.min.apply(null, vals)) + '–' + fmtNum(Math.max.apply(null, vals)) + ' ' + esc(s[0].unit || '') + '</span>'
     }).join('')
     var events = (p.entries || []).filter(function (e) { return ['hospital', 'treatment', 'report', 'lab'].indexOf(e.kind) >= 0 }).slice(0, 6)
     return '<section class="section"><div class="section-head"><h2>多指标时间轴</h2><span class="hint">' + chosen.length + ' 条线 · 每条线独立归一化</span></div>' +
@@ -616,26 +638,50 @@
   function pageSettings(p) {
     var snap = state.data.trialSnapshot || {}
     var channels = snap.channels || []
+    var tab = state.settingsTab || 'workspace'
     return pageHead('SETTINGS / 06', '设置与事实边界', '目录、临床数据库、隐私、导出和关于。每一项都写清“接通了没有”。', '') +
-      '<div class="settings-grid">' +
-        '<section class="paper setting-block"><h2>资料目录</h2><p>真选择器选目录；拒绝主目录本身、桌面、下载根目录、tmp。客户端与服务端各判一次。</p>' +
-          '<div class="path-box" id="settings-dir">' + esc((state.data.dataRoot && state.data.dataRoot.dir) || '演示态未接数据库') + '</div>' +
-          '<button class="btn" data-action="pick-dir">选择目录</button> <span class="tiny muted">重开 Desktop 应回显同一目录</span></section>' +
-        '<section class="paper setting-block"><h2>隐私</h2><p>设为私密的记录不进列表、导出、AI 上下文。这里可取消私密。</p>' +
-          privacyList(p) + '</section>' +
-        '<section class="paper setting-block" style="grid-column:1/-1"><h2>临床数据库</h2><p>逐通道终态原样展示。FAILED / NEEDS_SETUP 不算“查过”，不计覆盖率。</p>' +
-          '<div class="table-scroll"><table class="data-table"><thead><tr><th>通道</th><th>终态</th><th>返回</th><th>口径 / 失败原因</th></tr></thead><tbody>' +
-          (channels.length ? channels.map(function (c) {
-            return '<tr><td>' + esc(c.label || c.id) + '</td><td><span class="state ' + esc(c.state) + '">' + esc(c.state) + '</span></td><td class="mono">' + (c.count == null ? '—' : c.count) + '</td><td>' + esc(c.note || (c.state === 'FAILED' ? '本轮失败，不算查过' : '登记库口径')) + '</td></tr>'
-          }).join('') : '<tr><td colspan="4">演示态没有快照。开发版从 research/mpn-2026 读取。</td></tr>') +
-          '</tbody></table></div>' +
-          '<p class="tiny muted" style="margin-top:8px">快照日期 ' + esc(snap.snapshotDate || '未标注') + ' · 记录 ' + (snap.recordCount == null ? '—' : snap.recordCount) + ' 条 · 相关 ' + (snap.relevant == null ? '—' : snap.relevant) + ' 条。' + esc(snap.disclaimer || '') + '</p></section>' +
-        '<section class="paper setting-block"><h2>导出与打印</h2><p>导出的是本机 HTML 文件，不含私密记录。</p><div class="export-list">' +
-          '<button class="btn" data-action="export-summary">导出复诊摘要</button><button class="btn" data-action="print-summary">打印</button></div></section>' +
-        '<section class="paper setting-block"><h2>关于</h2><p><b>小髓宝</b>（占位名，待用户追认）· MPN 患者工作台 v0.2.0。</p>' +
-          '<p class="tiny muted">0 患者访谈 · 0 临床审核 · 所有医学表述待核。合成数据不对应真实患者。真实患者数据不进仓、不进报告。</p>' +
-          '<p class="tiny muted">数据连接：' + (state.api ? '本机 sqlite 已连接' : '演示态（未连接 API）') + '</p></section>' +
-      '</div>'
+      '<div class="tabs" role="tablist">' +
+        [['workspace', '工作区'], ['mineru', '文档解析（MinerU）'], ['clinical', '临床数据库']].map(function (t) {
+          return '<button role="tab" data-settings-tab="' + t[0] + '" aria-selected="' + (tab === t[0]) + '">' + t[1] + '</button>'
+        }).join('') + '</div>' +
+      (tab === 'workspace' ? settingsWorkspace(p) : tab === 'mineru' ? settingsMineru() : settingsClinical(snap, channels))
+  }
+  function settingsWorkspace(p) {
+    return '<div class="settings-grid">' +
+      '<section class="paper setting-block"><h2>资料目录</h2><p>真选择器选目录；拒绝主目录本身、桌面、下载根目录、tmp。客户端与服务端各判一次。</p>' +
+        '<div class="path-box" id="settings-dir">' + esc((state.data.dataRoot && state.data.dataRoot.dir) || '演示态未接数据库') + '</div>' +
+        '<button class="btn" data-action="pick-dir">选择目录</button> <span class="tiny muted">重开 Desktop 应回显同一目录</span></section>' +
+      '<section class="paper setting-block"><h2>隐私</h2><p>设为私密的记录不进列表、导出、AI 上下文。这里可取消私密。</p>' +
+        privacyList(p) + '</section>' +
+      '<section class="paper setting-block"><h2>导出与打印</h2><p>导出的是本机 HTML 文件，不含私密记录。</p><div class="export-list">' +
+        '<button class="btn" data-action="export-summary">导出复诊摘要</button><button class="btn" data-action="print-summary">打印</button></div></section>' +
+      '<section class="paper setting-block"><h2>关于</h2><p><b>小髓宝</b>（占位名，待用户追认）· MPN 患者工作台 v0.2.0。</p>' +
+        '<p class="tiny muted">0 患者访谈 · 0 临床审核 · 所有医学表述待核。合成数据不对应真实患者。真实患者数据不进仓、不进报告。</p>' +
+        '<p class="tiny muted">数据连接：' + (state.api ? '本机 sqlite 已连接' : '演示态（未连接 API）') + '</p></section>' +
+    '</div>'
+  }
+  function settingsMineru() {
+    return '<div class="settings-grid">' +
+      '<section class="paper setting-block" style="grid-column:1/-1"><h2>文档解析（MinerU）</h2>' +
+        '<p><b>本台未接入 MinerU。</b>勾选与保存都不联网，不会上传任何报告；未勾选前同样不会调用。</p>' +
+        '<label class="chip" style="display:inline-flex;align-items:center;width:max-content;margin:6px 0 12px"><input type="checkbox" disabled style="margin-right:6px"> 我知悉：接入后报告会离开本机（当前不可用）</label>' +
+        '<div class="form-grid"><div class="field"><label for="mineru-token">Token（只显后 4 位）</label><input id="mineru-token" value="••••••••••••未接入" disabled></div>' +
+        '<div class="field"><label for="mineru-model">解析模型</label><input id="mineru-model" value="pipeline（固定，不切 VLM）" disabled></div></div>' +
+        '<p class="tiny muted" style="margin-top:10px">接入后仍只做“抄写不判断”：表格先转竖线表再按位置对齐，数目不一致整行放弃；解析结果永远只是候选，逐项确认才进事实层。</p>' +
+        '<p class="tiny muted">免费额度口径（接入时适用）：单文件 ≤10 MB / ≤20 页，超出走降级解析；Token 只进本机密钥文件，日志只出掩码。</p></section>' +
+    '</div>'
+  }
+  function settingsClinical(snap, channels) {
+    return '<div class="settings-grid">' +
+      '<section class="paper setting-block" style="grid-column:1/-1"><h2>临床数据库</h2><p>逐通道终态原样展示。FAILED / NEEDS_SETUP 不算“查过”，不计覆盖率。</p>' +
+        '<div class="table-scroll"><table class="data-table"><thead><tr><th>通道</th><th>终态</th><th>返回</th><th>口径 / 失败原因</th></tr></thead><tbody>' +
+        (channels.length ? channels.map(function (c) {
+          return '<tr><td>' + esc(c.label || c.id) + '</td><td><span class="state ' + esc(c.state) + '">' + esc(c.state) + '</span></td><td class="mono">' + (c.count == null ? '—' : c.count) + '</td><td>' + esc(c.note || (c.state === 'FAILED' ? '本轮失败，不算查过' : '登记库口径')) + '</td></tr>'
+        }).join('') : '<tr><td colspan="4">演示态没有快照。开发版从 research/mpn-2026 读取。</td></tr>') +
+        '</tbody></table></div>' +
+        '<p class="tiny muted" style="margin-top:8px">快照日期 ' + esc(snap.snapshotDate || '未标注') + ' · 记录 ' + (snap.recordCount == null ? '—' : snap.recordCount) + ' 条 · 相关 ' + (snap.relevant == null ? '—' : snap.relevant) + ' 条。' + esc(snap.disclaimer || '') + '</p>' +
+        '<p class="tiny muted" style="margin-top:6px">数据口径：仅回顾不解读 · 不同方法/机构不合并 · 解读归医生。登记状态未核实；快照会过期。</p></section>' +
+    '</div>'
   }
   function privacyList(p) {
     var items = (p.privateEntries || []).slice(0, 12)
@@ -655,7 +701,7 @@
       '<div class="profile-list">' + (d.profiles || []).map(function (p) {
         return '<button class="profile-option" data-select-profile="' + esc(p.id) + '" aria-pressed="' + (p.id === state.profileId) + '"><b>' + esc(p.name) + '</b><span>' + esc(p.tag || p.subtype || 'MPN') + ' · ' + (Number(p.is_demo) ? '合成示例' : '我的档案') + '</span><span>' + (p.entries || []).length + ' 条记录 · ' + (p.metrics || []).length + ' 个指标</span></button>'
       }).join('') + '</div>' +
-      '<form id="profile-form" class="create-box"><h3>＋ 新建档案</h3><p class="tip" style="margin-top:2px">新建我的档案：只有名称必填，创建后立即切换。</p><p class="tip">只有名称必填。亚型/确诊年月可以之后再补。</p>' +
+      '<form id="profile-form" class="create-box"><h3>＋ 新建档案</h3><p class="tip" style="margin-top:2px">新建我的档案：只有名称必填，创建后立即切换；亚型/确诊年月可以之后再补。</p>' +
         '<div class="form-grid"><div class="field full"><label for="p-name">名称</label><input id="p-name" name="name" maxlength="80" required placeholder="例如：我的档案"></div>' +
         '<div class="field"><label for="p-subtype">亚型（可选）</label><select id="p-subtype" name="subtype"><option value="">未填</option><option>PV</option><option>ET</option><option>PMF</option><option>MPN-U</option></select></div>' +
         '<div class="field"><label for="p-date">确诊年月（可选）</label><input id="p-date" name="diagnosed_on" type="date"></div>' +
@@ -714,8 +760,9 @@
     state.page = 'record'
     paint()
   }
-  function submitRecord(form) {
+  function submitRecord(form, mode) {
     var kind = form.getAttribute('data-kind')
+    mode = mode || 'close'
     var fd = new FormData(form)
     var locations = fd.getAll('locations')
     var data = { date: fd.get('date'), title: fd.get('title'), body: fd.get('body'), source: fd.get('source'), private: fd.get('private') === 'on' }
@@ -734,13 +781,14 @@
     if (kind === 'doc') data.docType = fd.get('docType')
     if (kind === 'mind') data.mood = fd.get('mood')
     if (!data.title && !data.body && !data.metric) { toast('至少写一个标题或内容。', 'error'); return }
-    var btn = form.querySelector('button[type=submit]')
+    var btn = form.querySelector('button[type=submit][data-mode="' + mode + '"]')
     if (btn) { btn.disabled = true; btn.textContent = '保存中…' }
     if (state.api) {
       post('/entries', { profileKey: profile().id, kind: kind, data: data }).then(function (res) {
         applyBootstrap(res.bootstrap)
-        toast('已保存到本机数据库')
-      }).catch(function (error) { toast('保存失败：' + error.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = '保存记录' } })
+        toast(mode === 'continue' ? '已保存到本机数据库；可以接着录下一条' : '已保存到本机数据库')
+        if (mode !== 'continue') navigate('dash')
+      }).catch(function (error) { toast('保存失败：' + error.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = mode === 'continue' ? '保存并继续录入' : '保存并关闭' } })
     } else {
       var p = profile()
       p.entries = p.entries || []
@@ -752,6 +800,7 @@
       }
       paint({ keepScroll: true })
       toast('演示态：已加入本页内存，刷新会重置')
+      if (mode !== 'continue') navigate('dash')
     }
   }
   function togglePrivacy(id, kind, current) {
@@ -833,6 +882,7 @@
     var a = action.getAttribute('data-action')
     if (a === 'profiles') openProfiles()
     else if (a === 'new-record') openRecord(action.getAttribute('data-kind'))
+    else if (a === 'cancel-record') navigate('dash')
     else if (a === 'flip-metric') { var pressed = action.getAttribute('aria-pressed') === 'true'; action.setAttribute('aria-pressed', pressed ? 'false' : 'true') }
     else if (a === 'metrics-view') { state.metricsView = action.getAttribute('data-view'); paint({ keepScroll: true }) }
     else if (a === 'trial-detail') { state.trialDetail = action.getAttribute('data-key'); renderDrawer() }
@@ -850,11 +900,13 @@
   document.addEventListener('click', function (e) {
     var tab = e.target.closest('[data-trial-tab]')
     if (tab) { state.trialTab = tab.getAttribute('data-trial-tab'); paint({ keepScroll: true }) }
+    var stab = e.target.closest('[data-settings-tab]')
+    if (stab) { state.settingsTab = stab.getAttribute('data-settings-tab'); paint({ keepScroll: true }) }
     var kind = e.target.closest('[data-kind-btn]')
     if (kind) { state.recordKind = kind.getAttribute('data-kind-btn'); state.page = 'record'; paint({ keepScroll: true }) }
   })
   document.addEventListener('submit', function (e) {
-    if (e.target.id === 'record-form') { e.preventDefault(); submitRecord(e.target); return }
+    if (e.target.id === 'record-form') { e.preventDefault(); submitRecord(e.target, e.submitter && e.submitter.getAttribute('data-mode')); return }
     if (e.target.id === 'profile-form') {
       e.preventDefault()
       var fd = new FormData(e.target)
