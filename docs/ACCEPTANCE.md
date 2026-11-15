@@ -1,27 +1,27 @@
 # 验收记录
 
-代码版本/commit/dirty 状态：...
-包名称/版本/tgz/SHA-256：...
-Desktop 版本/OS/架构/Node：...
-安装入口/实际 profile/执行位置：...
-Agent 是否运行在目标 Desktop 内：...
+代码版本/commit/dirty 状态：0.2.0 / `abb72c7`（M5 检查点）+ 本轮恢复提交；工作树以最终 push 为准
+包名称/版本/tgz/SHA-256：`@community/mpn-workbench` 0.2.0 / `community-mpn-workbench-0.2.0.tgz` / `20765b506e68a7f76779d9bc51be000ac09e032577d465dbc50ae39d94307919`
+Desktop 版本/OS/架构/Node：**本机无 DSH Desktop**；OS Linux（InstaBox）/ x86_64 / Node v24.22.2
+安装入口/实际 profile/执行位置：无。仅 `/tmp/mpn-pack/profile` staging 静态扫描，不是真实 profile
+Agent 是否运行在目标 Desktop 内：否（dsh headless on sam）
 
 | ID | 层级 | 操作和预期 | 真实结果 | 证据文件/命令 | 通过/失败/未验证/不适用 |
 | --- | --- | --- | --- | --- | --- |
-| ACC-00 | 静态 | `dsh-wb-cli audit` 无 fail；warn 逐条给结论 | | | 未验证 |
-| ACC-01 | 静态 | 语法/类型/包合同/清单 | | | 未验证 |
-| ACC-02 | 集成 | 代表业务链与迁移/主体隔离 | | | 未验证 |
-| ACC-03 | 包 | 从实际 tgz 安装，版本/hash 一致 | | | 未验证 |
+| ACC-00 | 静态 | `npm run audit` 无 fail；warn 逐条给结论 | 40/40 · 0 fail · 0 待人工 | `npm run audit` | 通过 |
+| ACC-01 | 静态 | 语法/类型/包合同/清单 | `npm run check` exit 0；`npm pack --dry-run` 40 files | `/tmp/mpn-release-check.log` | 通过 |
+| ACC-02 | 集成 | 代表业务链与迁移/主体隔离 | test 13/13；8 类写入 + 自建档案 + 私密切换 | `npm test` | 通过（本机 sqlite） |
+| ACC-03 | 包 | 从实际 tgz 安装，版本/hash 一致 | tgz 解出副本 check-profile 1/1；真实 profile 未装 | sha256 20765b50… | 未验证（实机） |
 | ACC-04 | UI | 已安装列表→左侧入口→业务页 | | | 未验证 |
 | ACC-05 | UI | 无会话可用，所选布局和原生会话 | | | 未验证 |
 | ACC-06 | UI | 一级/二级页与配置弹窗逐项对照 | | | 未验证 |
 | ACC-07 | UI | 窄容器/大字/翻面/趋势/键盘 | | | 未验证 |
 | ACC-08 | 跨页 | 单一事实新增后各页一致 | | | 未验证 |
 | ACC-09 | 文件 | 预览/解析/确认/导出真实格式/回顾 | | | 未验证 |
-| ACC-10 | 外部 | API/MCP/cron 实际链路与失败恢复 | | | 未验证 |
+| ACC-10 | 外部 | API/MCP/cron 实际链路与失败恢复 | 试验快照：CTV SUCCESS 3；ChiCTR/ICTRP FAILED 原样；MinerU 未接入 | `research/mpn-2026/manifest.json` | 部分通过（失败路径已记录） |
 
 附官方规范第 8 节每条适用项的责任、证据与结果，不适用写理由。只跑静态不能把 ACC-04 以后勾通过。
-限制/失败/需要用户完成的重启步骤：...
+限制/失败/需要用户完成的重启步骤：**需要用户在 MacBook 上安装 tgz → 完整退出并重开 Desktop → 点「AI 对话」「配置目录」「新建我的档案」**。Agent 不自行重启宿主；未观察到的状态一律“未验证”。
 
 ## 设计与混合数据补充
 
@@ -49,7 +49,7 @@ Agent 是否运行在目标 Desktop 内：...
 
 | ID | 操作与预期 | 结果/证据 | 状态 |
 | --- | --- | --- | --- |
-| ACC-24 | 记录本机安装 / Git 推送 / GitHub Release / 市场PR分别完成到哪一步；未授权项为不适用 | | 未验证 |
+| ACC-24 | 记录本机安装 / Git 推送 / GitHub Release / 市场PR分别完成到哪一步；未授权项为不适用 | Git push `origin/main` 已执行；安装未执行；Release/市场 PR 未授权 | `git log`；`docs/RELEASE.md` | 部分通过 |
 | ACC-25 | 市场安装来源与条目一致；Release只有在YAML显式tarball时才是所选来源，否则按目录协议使用源码或npm | | 未验证 |
 | ACC-26 | 包版本、客户端版本、实际安装副本、tar hash一致；Desktop运行界面加载单独确认 | | 未验证 |
 | ACC-27 | 真实市场PR URL、最新检查、合并状态、目录可见和市场可安装分别记录；不得把PR提交称为已上架 | | 未验证 |
