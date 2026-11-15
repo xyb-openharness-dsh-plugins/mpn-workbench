@@ -4,6 +4,22 @@
 
 这是接入骨架，尚未实现真实业务。初始化后先将 [项目设计提示词](docs/DESIGN-PROMPT.md) 交给当前Agent；它应展示实际路径并以已有用户/场景/流程素材对齐设计者、研究与取舍原则。癌种项目另有 [完整专用提示词](prompts/NEW-CANCER-WORKBENCH.md)。需求见 [BRIEF](docs/BRIEF.md)，规格见 [SPEC](docs/SPEC.md)，任务见 [TASKS](docs/TASKS.md)；先读 [AGENTS](AGENTS.md)。CLI输出交接与首问，实际对话由Agent接续。
 
+## 疾病概要
+
+本台顶栏「?」与首页状态卡两个入口，打开同一份整页疾病概要。四段固定顺序；每段带来源，趋势段只写已发生事实。实现在 `prototypes/v0.2/primer-data.js` + `primer.js` + `primer.css`，面板 DOM 由 `primer.js` 运行时创建为 `#disease-primer`。来源与未取得原件的情况见 [docs/DISEASE-PRIMER.md](docs/DISEASE-PRIMER.md)。
+
+### 定义
+MPN 是一组造血干细胞克隆性疾病，经典三类为 PV / ET / PMF；解释名词与分类，不判断个人病情。
+
+### 医学资料规范和指南情况
+列出 WHO 2022 分类、NCCN 患者版 PDF（已取得）与 NCCN 临床版入口（需登录，未取得全文）；中国指南原件本轮未取得，如实标注。
+
+### 目前治疗全景概要
+按受累器官与病情轻重列出观察、降细胞、JAK 抑制剂、贫血/脾脏支持、移植与临床研究等类别；不写剂量、不排优劣。
+
+### 发展趋势
+只写已发生事实：WHO 第 5 版（2022）、ICC（2022）、FDA momelotinib 批件（2023-09）、CTV 语料截止日（2026-10-05）与本轮检索终态（2026-11-15）。
+
 ## 开发顺序
 
 先共创SPEC和候选数据关系，再交付HTML交互工作台；由用户确认对应版本/模块后，复核SCHEMA/API并实现生产功能。确认记录见docs/PROTOTYPE-REVIEW.md；模型不依赖前端Tab/流程。模板骨架不是业务已确认。
