@@ -1,0 +1,3 @@
+- insert:
+    - id: mpn-main
+      name: "@community/mpn-workbench"

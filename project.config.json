@@ -1,0 +1,18 @@
+{
+  "packageName": "@community/mpn-workbench",
+  "title": "小髓宝 MPN 患者工作台",
+  "repository": "https://github.com/xyb-openharness-dsh-plugins/mpn-workbench",
+  "description": "面向骨髓增殖性肿瘤（MPN）患者与照护者的病程记录、指标趋势、症状负担与临床研究信息工作台",
+  "slug": "mpn",
+  "layoutMode": "business-first",
+  "businessWidth": 0.65,
+  "targetUsers": "骨髓增殖性肿瘤（PV/ET/PMF 等）患者与照护者，尤其是需要长期随访、记录血常规与症状、准备就诊提问的人",
+  "scenario": "确诊后理解疾病与随访节奏，持续记录血常规、症状、治疗与就诊问题，复诊前整理一页摘要，并了解可核对的临床研究线索",
+  "coreFlow": [
+    "选择或新建我的档案，查看当前病程状态与最近指标",
+    "记录一次血常规、症状、治疗或就诊问题",
+    "在趋势与一图秀中回看变化，准备复诊摘要",
+    "在临床研究页按已确认字段检索与保存候选线索"
+  ],
+  "completion": "患者能在同一份本地档案中连续记录并回看自己的指标与症状，复诊前导出/打印一页摘要，且清楚哪些信息只是候选、需与医生核对"
+}
