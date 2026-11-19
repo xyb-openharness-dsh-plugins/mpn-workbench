@@ -45,3 +45,8 @@ M0–M6 完成；M7/M8 草稿完成；M9 回流完成；Desktop 实机（V2/V3�
 - 实测 bug 与修复：宿主 exact route 按路径去重，`/api/mpn/root` GET+POST 各注册一次触发 `webserver: duplicate exact route`；改为每路径注册一次、handler 内按 method 分发（dsh/index.js），版本 0.2.0→0.2.1，check 44→13/13 全绿、ui-parity 两处版本字面量同步。
 - 宿主证据：重启后 verify:desktop 全过（本次段 0 报错、mpn.sqlite 生成、清单含本包）；small-bowel 同段 0 报错。
 - 未做：人眼真机走查（新会话点击路径）留待用户；push 未执行（github.com:443 间歇不通，本地已 commit）。
+
+## 2026-11-19 10:xx 侧栏新建档案直达按钮（用户反馈）
+
+- 用户要求与 small-bowel 同款：档案菜单同步加创建新档案入口。mpn 侧栏档案卡下方新增「＋ 新建档案」虚线按钮（data-action=profiles，复用档案管理弹窗，聚焦到名称输入框），原型 v0.2 app.js/style.css 同步改动保持 ui-parity。
+- 升版 0.2.2；check/test 全绿；装机三点核验 0.2.2；重启后本次段报错 0 行。

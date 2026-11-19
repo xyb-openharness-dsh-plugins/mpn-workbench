@@ -1,6 +1,6 @@
 {
   "name": "@community/mpn-workbench",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "面向骨髓增殖性肿瘤（MPN）患者与照护者的病程记录、指标趋势、症状负担与临床研究信息工作台",
   "private": true,
   "type": "module",

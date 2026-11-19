@@ -162,6 +162,7 @@
         '<strong>' + esc(p.name) + '</strong>' +
         '<span class="switch">切换 / 新建档案 →</span>' +
       '</button>' +
+      '<button class="rail-new" type="button" data-action="profiles" aria-haspopup="dialog" aria-label="创建新档案">＋ 新建档案</button>' +
       '<nav class="nav" aria-label="一级导航">' + PAGES.map(function (x) {
         return '<button type="button" data-nav="' + x.id + '"' + (state.page === x.id ? ' aria-current="page"' : '') + '><span class="num">' + x.num + '</span>' + x.label + '</button>'
       }).join('') + '</nav>' +
