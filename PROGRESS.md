@@ -50,3 +50,7 @@ M0–M6 完成；M7/M8 草稿完成；M9 回流完成；Desktop 实机（V2/V3�
 
 - 用户要求与 small-bowel 同款：档案菜单同步加创建新档案入口。mpn 侧栏档案卡下方新增「＋ 新建档案」虚线按钮（data-action=profiles，复用档案管理弹窗，聚焦到名称输入框），原型 v0.2 app.js/style.css 同步改动保持 ui-parity。
 - 升版 0.2.2；check/test 全绿；装机三点核验 0.2.2；重启后本次段报错 0 行。
+
+## 2026-11-19 12:xx 官方登记页外链修复（0.2.3）
+
+- 同 small-bowel 0.2.4：沙箱 iframe 补 allow-popups + 壳层 mpn:open-external 兜底 + 业务页 source-link 点击兜底；原型同步。check 13/13；装机核验 0.2.3。

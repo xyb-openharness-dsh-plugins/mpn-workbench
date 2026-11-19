@@ -728,7 +728,7 @@
       '<h3>证据链</h3>' + (criteria.length ? criteria.map(criterionHtml).join('') : '<p>没有可对照字段。</p>') +
       '<h3>登记信息</h3><p>' + esc(t.summary || '本机快照只存登记的结构化字段。') + '</p>' +
       '<p class="tiny muted">条件要求来自登记摘要与入排原文；记录里是的值来自档案（含来源）。' + esc(t.snapshotDate || '') + ' 快照。</p>' +
-      (t.sourceUrl ? '<a class="source-link" href="' + esc(t.sourceUrl) + '" target="_blank" rel="noopener noreferrer">打开官方登记页 ↗</a>' : '<p class="tiny muted">本机快照没有官方链接；请按登记号自行检索。</p>') +
+      (t.sourceUrl ? '<a class="source-link" href="' + esc(t.sourceUrl) + '" target="_blank" rel="noopener noreferrer" data-action="open-external" data-open-external="' + esc(t.sourceUrl) + '">打开官方登记页 ↗</a>' : '<p class="tiny muted">本机快照没有官方链接；请按登记号自行检索。</p>') +
       '<div class="trial-foot" style="margin-top:18px"><button class="btn primary sm" data-action="save-trial" data-key="' + esc(t.trialKey) + '">收藏这条线索</button></div>' +
       '</aside>'
     setTimeout(function () { var b = $('.drawer .close'); if (b) b.focus() }, 0)
@@ -887,6 +887,17 @@
     else if (a === 'flip-metric') { var pressed = action.getAttribute('aria-pressed') === 'true'; action.setAttribute('aria-pressed', pressed ? 'false' : 'true') }
     else if (a === 'metrics-view') { state.metricsView = action.getAttribute('data-view'); paint({ keepScroll: true }) }
     else if (a === 'trial-detail') { state.trialDetail = action.getAttribute('data-key'); renderDrawer() }
+    else if (a === 'open-external') {
+      var url = action.getAttribute('data-open-external')
+      if (/^https?:\/\//i.test(url)) {
+        event.preventDefault()
+        var opened = window.open(url, '_blank', 'noopener')
+        if (!opened && window.parent !== window) {
+          try { window.parent.postMessage({ type: 'mpn:open-external', url: url }, window.location.origin) } catch (err) { /* 保持原跳转 */ }
+        }
+      }
+      return
+    }
     else if (a === 'save-trial') { saveTrial(action.getAttribute('data-key')); }
     else if (a === 'save-state') { saveTrial(action.getAttribute('data-key'), action.getAttribute('data-state')) }
     else if (a === 'reject-trial') { state.savedHidden[action.getAttribute('data-key')] = true; paint({ keepScroll: true }); toast('本次已从列表隐藏；没有改动档案或快照。') }
