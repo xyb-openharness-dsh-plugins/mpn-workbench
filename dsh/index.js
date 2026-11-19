@@ -56,16 +56,14 @@ export function apply(ctx, config = {}) {
     if (rejection !== undefined) { sendJson(res, rejection, { error: 'Authentication required' }); return false }
     return true
   }
-  const guard = (method, handler) => async (req, res) => {
-    if (!auth(req, res)) return
-    if (req.method !== method) return sendJson(res, 405, { error: 'Method not allowed' })
-    try { await handler(req, res) } catch (error) {
-      sendJson(res, error.status || 500, { ok: false, error: error.message || String(error), detail: error.status && error.status < 500 ? error.message : '服务端处理失败，请重试；如仍失败请查看宿主日志' })
-    }
+  // 宿主 exact route 按"路径"去重，不区分 method：同路径多方法必须合并注册一次，
+  // 各自注册会触发 webserver: duplicate exact route（2026-11-19 装机实测）
+  const routes = new Map()
+  const route = (path, method, handler) => {
+    const byMethod = routes.get(path) || new Map()
+    byMethod.set(method, handler)
+    routes.set(path, byMethod)
   }
-  const route = (path, method, handler) => ctx.effect(() => ctx.webServer.register({
-    kind: 'exact', path, handler: guard(method, handler),
-  }), `mpn ${method} ${path}`)
 
   route('/api/mpn/health', 'GET', (req, res) => sendJson(res, 200, {
     ok: true, version: manifest.version, apiVersion: 'v1',
@@ -120,5 +118,19 @@ export function apply(ctx, config = {}) {
       try { sendText(res, 200, readFileSync(join(PUBLIC, normalize(name))), type) }
       catch { sendText(res, 404, 'Not found') }
     })
+  }
+
+  for (const [path, byMethod] of routes) {
+    ctx.effect(() => ctx.webServer.register({
+      kind: 'exact', path,
+      handler: async (req, res) => {
+        if (!auth(req, res)) return
+        const handler = byMethod.get(req.method)
+        if (!handler) return sendJson(res, 405, { error: 'Method not allowed' })
+        try { await handler(req, res) } catch (error) {
+          sendJson(res, error.status || 500, { ok: false, error: error.message || String(error), detail: error.status && error.status < 500 ? error.message : '服务端处理失败，请重试；如仍失败请查看宿主日志' })
+        }
+      },
+    }), `mpn ${path}`)
   }
 }

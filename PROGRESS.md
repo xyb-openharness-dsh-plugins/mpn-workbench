@@ -39,3 +39,9 @@ M0–M6 完成；M7/M8 草稿完成；M9 回流完成；Desktop 实机（V2/V3�
 | V1 | 通过（源码/包/tgz 静态） | check 0 / test 13/13 / audit 40/40 |
 | V2 | 未验证 · 待 MacBook 装机环节 | 本机无 Desktop |
 | V3 | 未验证 · 待 MacBook 装机环节 | 三条点击未执行 |
+## 2026-11-19 08:xx M6 装机记录（本地代跑，待晨审追认）
+
+- 装机：`dsh plugin --profile web add`（DSH_HOME 指向 io.dsh.desktop harness）装入 profile web；dep + bundles + node_modules 三点核验 0.2.1。
+- 实测 bug 与修复：宿主 exact route 按路径去重，`/api/mpn/root` GET+POST 各注册一次触发 `webserver: duplicate exact route`；改为每路径注册一次、handler 内按 method 分发（dsh/index.js），版本 0.2.0→0.2.1，check 44→13/13 全绿、ui-parity 两处版本字面量同步。
+- 宿主证据：重启后 verify:desktop 全过（本次段 0 报错、mpn.sqlite 生成、清单含本包）；small-bowel 同段 0 报错。
+- 未做：人眼真机走查（新会话点击路径）留待用户；push 未执行（github.com:443 间歇不通，本地已 commit）。
